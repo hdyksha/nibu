@@ -2,8 +2,8 @@ use tauri::State;
 
 use crate::db::Database;
 use crate::error::AppError;
-use crate::models::Task;
-use crate::repository::task_repo;
+use crate::models::{FileLink, MarkdownFile, Task};
+use crate::repository::{link_repo, task_repo};
 
 /// 新規タスクを作成する (Req 4.1, 4.3)
 #[tauri::command]
@@ -80,4 +80,63 @@ pub fn list_tasks(
 
     let filter_str = filter.as_deref().unwrap_or("all");
     task_repo::list_tasks_filtered(&conn, filter_str).map_err(|e| e.to_string())
+}
+
+/// タスクにファイルを紐づける (Req 5.1, 5.2)
+#[tauri::command]
+pub fn add_file_link(
+    task_id: String,
+    file_id: String,
+    db: State<'_, Database>,
+) -> Result<FileLink, String> {
+    if task_id.trim().is_empty() || file_id.trim().is_empty() {
+        return Err(
+            AppError::ValidationError("task_idとfile_idは必須です".to_string()).to_string(),
+        );
+    }
+
+    let conn = db.conn.lock().map_err(|e| {
+        AppError::DatabaseError(format!("ロック取得に失敗: {}", e)).to_string()
+    })?;
+
+    link_repo::create_link(&conn, &task_id, &file_id).map_err(|e| e.to_string())
+}
+
+/// タスクからファイルの紐づけを解除する (Req 5.5)
+#[tauri::command]
+pub fn remove_file_link(
+    task_id: String,
+    file_id: String,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    if task_id.trim().is_empty() || file_id.trim().is_empty() {
+        return Err(
+            AppError::ValidationError("task_idとfile_idは必須です".to_string()).to_string(),
+        );
+    }
+
+    let conn = db.conn.lock().map_err(|e| {
+        AppError::DatabaseError(format!("ロック取得に失敗: {}", e)).to_string()
+    })?;
+
+    link_repo::delete_link(&conn, &task_id, &file_id).map_err(|e| e.to_string())
+}
+
+/// タスクに紐づくファイル一覧を取得する (Req 5.3)
+#[tauri::command]
+pub fn get_task_file_links(
+    task_id: String,
+    db: State<'_, Database>,
+) -> Result<Vec<MarkdownFile>, String> {
+    if task_id.trim().is_empty() {
+        return Err(
+            AppError::ValidationError("task_idは必須です".to_string()).to_string(),
+        );
+    }
+
+    let conn = db.conn.lock().map_err(|e| {
+        AppError::DatabaseError(format!("ロック取得に失敗: {}", e)).to_string()
+    })?;
+
+    link_repo::get_files_for_task(&conn, &task_id).map_err(|e| e.to_string())
 }
