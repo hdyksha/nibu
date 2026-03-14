@@ -20,7 +20,18 @@ inclusion: always
 - `executePwsh` で実行するコマンドは、環境検出の結果に合ったシェルコマンドを使うこと
   - Linux / macOS / WSL → bash コマンド（`ls`, `cat`, `find` 等）
   - Windows ネイティブ → PowerShell コマンド（`Get-ChildItem` 等）
-- `executePwsh` の `cwd` パラメータには相対パスを使うこと
+
+### `cwd` パラメータの使用禁止（WSL環境）
+
+WSL環境では `executePwsh` の `cwd` パラメータに相対パスを渡しても、内部でWindows UNCパス（`\\wsl.localhost\...`）に変換されるため、bashが認識できず `No such file or directory` になる。
+
+**ルール: WSL環境では `cwd` パラメータを使用しないこと。**
+
+サブディレクトリでコマンドを実行したい場合は、以下のいずれかで対処する:
+
+- コマンドの引数でパスを指定する（例: `cargo test --manifest-path sub/dir/Cargo.toml`）
+- ワークスペースルートから相対パスでファイルを直接参照する（例: `cat sub/dir/file.txt`）
+- どうしてもディレクトリ移動が必要な場合は、コマンド内でサブシェルを使う（例: `(cd sub/dir && make)`）
 
 ## ファイル読み取りの優先順位
 
