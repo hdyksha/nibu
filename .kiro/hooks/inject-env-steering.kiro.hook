@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Inject Environment Steering",
+  "description": "タスク実行前に実行環境を動的に検出し、サブエージェントへのsteering伝達をリマインドする",
+  "version": "1",
+  "when": {
+    "type": "preTaskExecution"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "echo '--- Environment Detection ---' && echo \"OS: $(uname -s)\" && echo \"Kernel: $(uname -r)\" && echo \"Workspace: $(pwd)\" && echo '--- Steering Reminder ---' && echo 'When delegating tasks to subagents via invokeSubAgent, you MUST include .kiro/steering/environment.md in the contextFiles array. This ensures subagents use correct relative paths and shell commands for this environment.'"
+  }
+}
