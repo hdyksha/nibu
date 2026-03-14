@@ -312,7 +312,7 @@ mod tests {
         let (db, _tmp) = setup();
         let conn = db.conn.lock().unwrap();
 
-        let t1 = create_task(&conn, "未完了1", "").unwrap();
+        let _t1 = create_task(&conn, "未完了1", "").unwrap();
         let t2 = create_task(&conn, "完了1", "").unwrap();
         create_task(&conn, "未完了2", "").unwrap();
 
