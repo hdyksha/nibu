@@ -27,3 +27,24 @@ inclusion: always
 1. `readCode` / `readFile` / `readMultipleFiles` — まずこれらを相対パスで試す
 2. 失敗した場合 → `executePwsh` で `cat <相対パス>`（または環境に応じた同等コマンド）を使う
 3. ディレクトリ一覧 → `executePwsh` で `ls` や `find`（または環境に応じた同等コマンド）を使う
+
+## WSL環境でのファイル書き込み（重要）
+
+WSL環境では `fsWrite`, `fsAppend`, `strReplace`, `editCode` などのファイル書き込みツールが、内部のUNCパス解決の問題により、ファイルを誤った場所（`wsl.localhost/` ディレクトリ配下）に作成してしまうことがある。
+
+**WSL環境でファイルを作成・編集する場合は、以下のルールに従うこと:**
+
+1. **新規ファイル作成** → `executePwsh` で heredoc を使う:
+   ```bash
+   mkdir -p path/to/dir && cat > path/to/file.ext << 'EOF'
+   ファイル内容
+   EOF
+   ```
+
+2. **既存ファイルへの追記** → `executePwsh` で `cat >>` やリダイレクトを使う
+
+3. **既存ファイルの部分編集** → `executePwsh` で `sed -i` を使う
+
+4. **`fsWrite`, `fsAppend`, `strReplace`, `editCode` は使用禁止** — これらのツールはWSL環境でパス解決に失敗する可能性がある
+
+この制約はサブエージェント（`invokeSubAgent` で呼ばれるエージェント）にも適用される。
