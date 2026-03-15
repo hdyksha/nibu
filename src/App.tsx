@@ -10,6 +10,7 @@ import type { MarkdownEditorHandle } from "./components/MarkdownEditor";
 import { Toolbar } from "./components/Toolbar";
 import { ViewToggle } from "./components/ViewToggle";
 import { TaskPanel } from "./components/TaskPanel";
+import { TitleBar } from "./components/TitleBar";
 
 function App() {
   const fileManager = useFileManager();
@@ -59,6 +60,7 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-white" onKeyDown={handleKeyDown}>
+      <TitleBar />
       <div className="flex flex-1 min-h-0">
         {/* サイドバー */}
         {sidebarVisible && (
