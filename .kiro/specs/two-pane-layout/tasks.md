@@ -31,7 +31,7 @@
     - **Property 4: タブアクティブ化**
     - **Validates: Requirements 3.5**
 
-- [ ] 2. チェックポイント - useTabManager の動作確認
+- [x] 2. チェックポイント - useTabManager の動作確認
   - すべてのテストが通ることを確認し、不明点があればユーザーに質問する。
 
 - [ ] 3. ActivityBar コンポーネントの実装
