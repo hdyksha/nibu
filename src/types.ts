@@ -38,3 +38,17 @@ export interface UpdateTaskInput {
 }
 
 export type TaskFilter = 'all' | 'incomplete' | 'completed';
+
+// 2ペインレイアウト用型定義
+
+export type TabType = 'editor' | 'task';
+
+export interface Tab {
+  id: string;           // 一意識別子（editor タブ: `editor-${fileId}`, task タブ: `task`）
+  type: TabType;        // タブ種別
+  fileId?: string;      // editor タブの場合のファイルID
+  title: string;        // 表示タイトル
+  isDirty: boolean;     // 未保存変更フラグ
+}
+
+export type ActivityView = 'files' | 'tasks';

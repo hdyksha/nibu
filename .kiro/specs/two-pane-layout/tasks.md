@@ -7,7 +7,7 @@
 ## タスク
 
 - [ ] 1. 型定義と useTabManager フックの実装
-  - [ ] 1.1 タブ関連の型定義を追加する
+  - [x] 1.1 タブ関連の型定義を追加する
     - `Tab`, `TabType`, `ActivityView` 型を `src/types.ts` に追加
     - _Requirements: 3.1, 4.1_
   - [ ] 1.2 useTabManager フックを実装する
