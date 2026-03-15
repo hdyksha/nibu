@@ -4,6 +4,7 @@ import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
 import { useWindowCloseGuard } from "./hooks/useWindowCloseGuard";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FileSidebar } from "./components/FileSidebar";
+import { TaskPanel } from "./components/TaskPanel";
 
 function App() {
   const fileManager = useFileManager();
@@ -26,6 +27,20 @@ function App() {
     [guard, fileManager],
   );
 
+  // タスクの紐づけファイルクリック時にEditorでファイルを開く (Req 5.4)
+  const handleFileOpen = useCallback(
+    async (fileId: string) => {
+      const canProceed = await guard.guardBeforeAction(
+        fileManager.isDirty,
+        fileManager.saveFile,
+      );
+      if (canProceed) {
+        await fileManager.loadFile(fileId);
+      }
+    },
+    [guard, fileManager],
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <FileSidebar
@@ -35,6 +50,7 @@ function App() {
       <main className="flex-1 p-4">
         <h1 className="text-2xl font-bold">Nibu - Markdown Editor</h1>
       </main>
+      <TaskPanel onFileOpen={handleFileOpen} />
 
       {/* 未保存変更の保存確認ダイアログ (Req 3.7) */}
       <ConfirmDialog
