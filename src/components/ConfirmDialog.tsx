@@ -6,18 +6,12 @@ export interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** 第3のボタン（操作自体をキャンセル）。指定しなければ表示しない */
   dismissLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
-  /** 操作自体のキャンセル。未指定なら onCancel と同じ */
   onDismiss?: () => void;
 }
 
-/**
- * 汎用確認ダイアログ。
- * open=true のとき <dialog> をモーダル表示する。
- */
 export function ConfirmDialog({
   open,
   title,
@@ -43,7 +37,7 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      className="rounded-lg shadow-xl p-0 backdrop:bg-black/40"
+      className="rounded-xl shadow-xl p-0 backdrop:bg-black/40 border border-[var(--border-color)]"
       onCancel={(e) => {
         e.preventDefault();
         (onDismiss ?? onCancel)();
@@ -51,15 +45,15 @@ export function ConfirmDialog({
       aria-labelledby="confirm-dialog-title"
     >
       <div className="p-6 min-w-[320px]">
-        <h2 id="confirm-dialog-title" className="text-base font-semibold mb-2">
+        <h2 id="confirm-dialog-title" className="text-base font-semibold text-[var(--text-primary)] mb-2">
           {title}
         </h2>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">{message}</p>
         <div className="flex justify-end gap-2">
           {dismissLabel && (
             <button
               type="button"
-              className="px-4 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 mr-auto"
+              className="px-4 py-1.5 text-sm rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-slate-100 transition-colors mr-auto"
               onClick={onDismiss ?? onCancel}
             >
               {dismissLabel}
@@ -67,14 +61,14 @@ export function ConfirmDialog({
           )}
           <button
             type="button"
-            className="px-4 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+            className="px-4 py-1.5 text-sm rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-slate-100 transition-colors"
             onClick={onCancel}
           >
             {cancelLabel}
           </button>
           <button
             type="button"
-            className="px-4 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600"
+            className="px-4 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-colors shadow-sm"
             onClick={onConfirm}
           >
             {confirmLabel}

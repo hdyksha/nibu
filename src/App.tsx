@@ -17,14 +17,11 @@ function App() {
   const guard = useUnsavedChangesGuard();
   const editorRef = useRef<MarkdownEditorHandle>(null);
 
-  // サイドバー・タスクパネルの表示状態 (Req 6.2)
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [taskPanelVisible, setTaskPanelVisible] = useState(true);
 
-  // アプリ終了時の未保存変更ガード (Req 3.7)
   useWindowCloseGuard(fileManager.isDirty, fileManager.saveFile);
 
-  // モード切り替え時にカーソル/スクロール位置を保存してからトグル (Req 2.6)
   const handleToggleViewMode = useCallback(() => {
     if (editorRef.current) {
       savePosition(editorRef.current.getCursorOffset(), editorRef.current.getScrollRatio());
@@ -32,29 +29,22 @@ function App() {
     toggleViewMode();
   }, [savePosition, toggleViewMode]);
 
-  // ファイル切り替え時に未保存変更を確認してからロード (Req 3.7)
   const handleFileSelect = useCallback(
     async (fileId: string) => {
       const canProceed = await guard.guardBeforeAction(fileManager.isDirty, fileManager.saveFile);
-      if (canProceed) {
-        await fileManager.loadFile(fileId);
-      }
+      if (canProceed) await fileManager.loadFile(fileId);
     },
     [guard, fileManager],
   );
 
-  // タスクの紐づけファイルクリック時にEditorでファイルを開く (Req 5.4)
   const handleFileOpen = useCallback(
     async (fileId: string) => {
       const canProceed = await guard.guardBeforeAction(fileManager.isDirty, fileManager.saveFile);
-      if (canProceed) {
-        await fileManager.loadFile(fileId);
-      }
+      if (canProceed) await fileManager.loadFile(fileId);
     },
     [guard, fileManager],
   );
 
-  // Ctrl+S / Cmd+S でファイル保存 (Req 3.2)
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -68,10 +58,9 @@ function App() {
   const savedPosition = consumeSavedPosition();
 
   return (
-    <div className="h-screen flex flex-col" onKeyDown={handleKeyDown}>
-      {/* メインレイアウト */}
+    <div className="h-screen flex flex-col bg-white" onKeyDown={handleKeyDown}>
       <div className="flex flex-1 min-h-0">
-        {/* サイドバー (Req 3.4) */}
+        {/* サイドバー */}
         {sidebarVisible && (
           <FileSidebar
             currentFileId={fileManager.currentFile?.id ?? null}
@@ -81,45 +70,44 @@ function App() {
 
         {/* エディタ領域 */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* ツールバー行: Toolbar + ViewToggle + パネルトグル */}
-          <div className="flex items-center border-b bg-white">
+          {/* ツールバー */}
+          <div className="flex items-center px-1 py-1 bg-[var(--toolbar-bg)] border-b border-[var(--border-color)]">
             <button
               type="button"
-              className="px-2 py-2 text-sm hover:bg-gray-100"
+              className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-slate-100 hover:text-[var(--text-primary)] transition-colors"
               onClick={() => setSidebarVisible((v) => !v)}
               aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
               title={sidebarVisible ? "サイドバーを隠す" : "サイドバーを表示"}
             >
-              ☰
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
             </button>
 
             <Toolbar editorView={viewMode === "preview" ? editorRef.current?.editorView ?? null : null} />
 
             <div className="ml-auto flex items-center gap-2 px-2">
-              {/* ダーティ表示 (Req 3.7) */}
               {fileManager.isDirty && (
-                <span className="text-xs text-orange-500" aria-label="Unsaved changes">●</span>
+                <span className="text-xs text-amber-500 font-medium" aria-label="Unsaved changes">●</span>
               )}
               {fileManager.isSaving && (
-                <span className="text-xs text-gray-400">保存中...</span>
+                <span className="text-xs text-[var(--text-muted)]">保存中...</span>
               )}
 
               <ViewToggle currentMode={viewMode} onToggle={handleToggleViewMode} />
 
               <button
                 type="button"
-                className="px-2 py-1 text-sm hover:bg-gray-100 rounded"
+                className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-slate-100 hover:text-[var(--text-primary)] transition-colors"
                 onClick={() => setTaskPanelVisible((v) => !v)}
                 aria-label={taskPanelVisible ? "Hide task panel" : "Show task panel"}
                 title={taskPanelVisible ? "タスクパネルを隠す" : "タスクパネルを表示"}
               >
-                ✓
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
               </button>
             </div>
           </div>
 
-          {/* エディタ本体 (Req 1.1, 2.1) */}
-          <div className="flex-1 min-h-0 overflow-auto">
+          {/* エディタ本体 */}
+          <div className="flex-1 min-h-0 overflow-auto bg-white">
             {fileManager.currentFile ? (
               <MarkdownEditor
                 ref={editorRef}
@@ -129,19 +117,20 @@ function App() {
                 savedPosition={savedPosition}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                ファイルを選択または作成してください
+              <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] gap-3">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span className="text-sm">ファイルを選択または作成してください</span>
               </div>
             )}
           </div>
 
-          {/* エラー表示 (Req 3.6) */}
+          {/* エラー表示 */}
           {fileManager.error && (
-            <div className="px-4 py-2 bg-red-50 text-red-600 text-sm flex items-center justify-between" role="alert">
+            <div className="px-4 py-2.5 bg-red-50 border-t border-red-100 text-red-600 text-sm flex items-center justify-between" role="alert">
               <span>{fileManager.error}</span>
               <button
                 type="button"
-                className="text-red-400 hover:text-red-600 text-xs"
+                className="text-red-400 hover:text-red-600 text-xs ml-4"
                 onClick={fileManager.clearError}
                 aria-label="Dismiss error"
               >
@@ -151,11 +140,10 @@ function App() {
           )}
         </div>
 
-        {/* タスクパネル (Req 4.5) */}
+        {/* タスクパネル */}
         {taskPanelVisible && <TaskPanel onFileOpen={handleFileOpen} />}
       </div>
 
-      {/* 未保存変更の保存確認ダイアログ (Req 3.7) */}
       <ConfirmDialog
         open={guard.showDialog}
         title="未保存の変更"
