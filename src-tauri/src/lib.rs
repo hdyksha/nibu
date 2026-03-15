@@ -27,6 +27,7 @@ pub fn run() {
             file_commands::load_file,
             file_commands::list_files,
             file_commands::delete_file,
+            file_commands::rename_file,
             // タスク操作コマンド (Req 4.1, 4.3, 4.4, 4.6, 4.7)
             task_commands::create_task,
             task_commands::update_task,

@@ -167,3 +167,22 @@ mod tests {
         assert_eq!(sanitize_filename("a/b\\c:d"), "a_b_c_d");
     }
 }
+
+/// ファイルタイトルをリネームする
+#[tauri::command]
+pub fn rename_file(
+    file_id: String,
+    new_title: String,
+    db: State<'_, Database>,
+) -> Result<MarkdownFile, String> {
+    if new_title.trim().is_empty() {
+        return Err(AppError::ValidationError("タイトルは必須です".to_string()).to_string());
+    }
+
+    let conn = db.conn.lock().map_err(|e| {
+        AppError::DatabaseError(format!("ロック取得に失敗: {}", e)).to_string()
+    })?;
+
+    file_repo::rename_file(&conn, &file_id, new_title.trim())
+        .map_err(|e| e.to_string())
+}

@@ -109,6 +109,22 @@ fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
+
+/// ファイルタイトルをリネームする
+pub fn rename_file(conn: &Connection, file_id: &str, new_title: &str) -> Result<MarkdownFile, AppError> {
+    let now = chrono_now();
+    let affected = conn
+        .execute(
+            "UPDATE files SET title = ?1, updated_at = ?2 WHERE id = ?3",
+            params![new_title, now, file_id],
+        )
+        .map_err(|e| AppError::DatabaseError(format!("ファイルリネームに失敗: {}", e)))?;
+
+    if affected == 0 {
+        return Err(AppError::FileNotFound(file_id.to_string()));
+    }
+    get_file(conn, file_id)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -218,5 +234,28 @@ mod tests {
         let file = create_file(&conn, "タイムスタンプ", "/path/ts.md").unwrap();
         assert!(!file.created_at.is_empty());
         assert!(!file.updated_at.is_empty());
+    }
+
+    #[test]
+    fn test_rename_file() {
+        let (db, _tmp) = setup();
+        let conn = db.conn.lock().unwrap();
+
+        let file = create_file(&conn, "元の名前", "/path/rename.md").unwrap();
+        let renamed = rename_file(&conn, &file.id, "新しい名前").unwrap();
+        assert_eq!(renamed.title, "新しい名前");
+        assert_eq!(renamed.id, file.id);
+
+        let fetched = get_file(&conn, &file.id).unwrap();
+        assert_eq!(fetched.title, "新しい名前");
+    }
+
+    #[test]
+    fn test_rename_nonexistent_file() {
+        let (db, _tmp) = setup();
+        let conn = db.conn.lock().unwrap();
+
+        let result = rename_file(&conn, "nonexistent-id", "new name");
+        assert!(result.is_err());
     }
 }
