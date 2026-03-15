@@ -10,7 +10,7 @@
   - [x] 1.1 タブ関連の型定義を追加する
     - `Tab`, `TabType`, `ActivityView` 型を `src/types.ts` に追加
     - _Requirements: 3.1, 4.1_
-  - [ ] 1.2 useTabManager フックを実装する
+  - [x] 1.2 useTabManager フックを実装する
     - `src/hooks/useTabManager.ts` を作成
     - `openEditorTab`: fileId で重複チェック → 既存ならアクティブ化、なければ新規追加
     - `openTaskTab`: task タブの重複チェック → 既存ならアクティブ化、なければ新規追加
