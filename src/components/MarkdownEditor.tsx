@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
-import { EditorState } from "prosemirror-state";
+import { EditorState, Selection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap } from "prosemirror-commands";
@@ -8,15 +8,26 @@ import { markdownSchema } from "../editor/schema";
 import { markdownParser } from "../editor/parser";
 import { markdownSerializer } from "../editor/serializer";
 
+export interface SavedPosition {
+  cursorOffset: number;
+  scrollRatio: number;
+}
+
 export interface MarkdownEditorProps {
   content: string;
   viewMode: "preview" | "raw";
   onChange: (content: string) => void;
+  /** Position to restore after mode switch */
+  savedPosition?: SavedPosition | null;
 }
 
 export interface MarkdownEditorHandle {
   /** Current ProseMirror EditorView (null in raw mode) */
   editorView: EditorView | null;
+  /** Get current cursor offset in markdown source */
+  getCursorOffset: () => number;
+  /** Get current scroll ratio */
+  getScrollRatio: () => number;
 }
 
 /**
@@ -25,21 +36,49 @@ export interface MarkdownEditorHandle {
  * - preview mode: WYSIWYG rendering via ProseMirror
  * - raw mode: plain textarea showing markdown source
  *
+ * Supports cursor/scroll position preservation across mode switches (Req 2.6).
  * Exposes EditorView via ref for Toolbar integration.
  */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  function MarkdownEditor({ content, viewMode, onChange }, ref) {
+  function MarkdownEditor({ content, viewMode, onChange, savedPosition }, ref) {
     const editorRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const viewRef = useRef<EditorView | null>(null);
-    // Track the latest content to avoid echoing back our own changes
     const contentRef = useRef(content);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
+
+    /** Convert ProseMirror position to character offset in markdown source */
+    const getCursorOffset = useCallback((): number => {
+      if (viewMode === "raw") {
+        return textareaRef.current?.selectionStart ?? 0;
+      }
+      const view = viewRef.current;
+      if (!view) return 0;
+      const { from } = view.state.selection;
+      const beforeSlice = view.state.doc.slice(0, from);
+      const tempDoc = markdownSchema.topNodeType.create(null, beforeSlice.content);
+      return markdownSerializer.serialize(tempDoc).length;
+    }, [viewMode]);
+
+    /** Get scroll ratio (0-1) of the editor container */
+    const getScrollRatio = useCallback((): number => {
+      if (viewMode === "raw") {
+        const ta = textareaRef.current;
+        if (!ta || ta.scrollHeight <= ta.clientHeight) return 0;
+        return ta.scrollTop / (ta.scrollHeight - ta.clientHeight);
+      }
+      const el = editorRef.current;
+      if (!el || el.scrollHeight <= el.clientHeight) return 0;
+      return el.scrollTop / (el.scrollHeight - el.clientHeight);
+    }, [viewMode]);
 
     useImperativeHandle(ref, () => ({
       get editorView() {
         return viewRef.current;
       },
+      getCursorOffset,
+      getScrollRatio,
     }));
 
     // Create / destroy ProseMirror view
@@ -72,11 +111,49 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
       viewRef.current = view;
 
+      // Restore cursor position after ProseMirror mounts
+      if (savedPosition) {
+        requestAnimationFrame(() => {
+          try {
+            const targetOffset = savedPosition.cursorOffset;
+            const resolvedPos = findProseMirrorPos(view, targetOffset);
+            const selection = Selection.near(view.state.doc.resolve(resolvedPos));
+            const tr = view.state.tr.setSelection(selection);
+            view.dispatch(tr);
+            view.focus();
+
+            const el = editorRef.current;
+            if (el && el.scrollHeight > el.clientHeight) {
+              el.scrollTop = savedPosition.scrollRatio * (el.scrollHeight - el.clientHeight);
+            }
+          } catch {
+            // Position restoration is best-effort
+          }
+        });
+      }
+
       return () => {
         view.destroy();
         viewRef.current = null;
       };
-      // Re-create when switching TO preview mode.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode]);
+
+    // Restore position in raw mode (textarea)
+    useEffect(() => {
+      if (viewMode !== "raw" || !savedPosition) return;
+      const ta = textareaRef.current;
+      if (!ta) return;
+
+      requestAnimationFrame(() => {
+        const offset = Math.min(savedPosition.cursorOffset, ta.value.length);
+        ta.setSelectionRange(offset, offset);
+        ta.focus();
+
+        if (ta.scrollHeight > ta.clientHeight) {
+          ta.scrollTop = savedPosition.scrollRatio * (ta.scrollHeight - ta.clientHeight);
+        }
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode]);
 
@@ -94,7 +171,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       view.dispatch(tr);
     }, [content, viewMode]);
 
-    // Raw mode change handler
     const handleRawChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
@@ -107,6 +183,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     if (viewMode === "raw") {
       return (
         <textarea
+          ref={textareaRef}
           className="w-full h-full p-4 font-mono text-sm bg-white border-0 resize-none outline-none"
           value={content}
           onChange={handleRawChange}
@@ -125,3 +202,27 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     );
   },
 );
+
+/**
+ * Find the ProseMirror document position closest to a character offset
+ * in the serialized markdown text.
+ */
+function findProseMirrorPos(view: EditorView, targetOffset: number): number {
+  const docSize = view.state.doc.content.size;
+  if (targetOffset <= 0) return 0;
+
+  let lo = 0;
+  let hi = docSize;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const slice = view.state.doc.slice(0, mid);
+    const tempDoc = markdownSchema.topNodeType.create(null, slice.content);
+    const len = markdownSerializer.serialize(tempDoc).length;
+    if (len < targetOffset) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return Math.min(lo, docSize);
+}
