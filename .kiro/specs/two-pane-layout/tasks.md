@@ -46,7 +46,7 @@
     - _Requirements: 1.3, 1.4_
 
 - [ ] 4. SidePanel コンポーネントの実装
-  - [ ] 4.1 SidePanel コンポーネントを作成する
+  - [x] 4.1 SidePanel コンポーネントを作成する
     - `src/components/SidePanel.tsx` を作成
     - `activeView` に応じて既存の FileSidebar または TaskPanel を切り替え表示
     - CSS `resize: horizontal` または drag ハンドルでリサイズ可能にする
