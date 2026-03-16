@@ -28,6 +28,8 @@ export interface MarkdownEditorHandle {
   getCursorOffset: () => number;
   /** Get current scroll ratio */
   getScrollRatio: () => number;
+  /** Focus the editor */
+  focus: () => void;
 }
 
 /**
@@ -79,6 +81,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       },
       getCursorOffset,
       getScrollRatio,
+      focus() {
+        if (viewRef.current) {
+          viewRef.current.focus();
+        } else if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      },
     }));
 
     // Create / destroy ProseMirror view
@@ -130,6 +139,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             // Position restoration is best-effort
           }
         });
+      } else {
+        requestAnimationFrame(() => view.focus());
       }
 
       return () => {
@@ -141,19 +152,23 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     // Restore position in raw mode (textarea)
     useEffect(() => {
-      if (viewMode !== "raw" || !savedPosition) return;
+      if (viewMode !== "raw") return;
       const ta = textareaRef.current;
       if (!ta) return;
 
-      requestAnimationFrame(() => {
-        const offset = Math.min(savedPosition.cursorOffset, ta.value.length);
-        ta.setSelectionRange(offset, offset);
-        ta.focus();
+      if (savedPosition) {
+        requestAnimationFrame(() => {
+          const offset = Math.min(savedPosition.cursorOffset, ta.value.length);
+          ta.setSelectionRange(offset, offset);
+          ta.focus();
 
-        if (ta.scrollHeight > ta.clientHeight) {
-          ta.scrollTop = savedPosition.scrollRatio * (ta.scrollHeight - ta.clientHeight);
-        }
-      });
+          if (ta.scrollHeight > ta.clientHeight) {
+            ta.scrollTop = savedPosition.scrollRatio * (ta.scrollHeight - ta.clientHeight);
+          }
+        });
+      } else {
+        requestAnimationFrame(() => ta.focus());
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode]);
 

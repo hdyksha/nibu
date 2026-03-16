@@ -21,3 +21,7 @@ body {
   background: #ffffff;
   color: var(--text-primary);
 }
+
+.ProseMirror:focus {
+  outline: none;
+}

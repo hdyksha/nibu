@@ -55,6 +55,12 @@ export const EditorTabContent = forwardRef<EditorTabContentHandle, EditorTabCont
         onTitleChange(fileManager.currentFile.title);
       }
     }, [fileManager.currentFile?.title, onTitleChange]);
+    // タブがアクティブになったときにエディタにフォーカス
+    useEffect(() => {
+      if (isActive && editorRef.current) {
+        requestAnimationFrame(() => editorRef.current?.focus());
+      }
+    }, [isActive]);
 
     const handleToggleViewMode = useCallback(() => {
       if (editorRef.current) {
