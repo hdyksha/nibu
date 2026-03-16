@@ -6,6 +6,20 @@ pub mod commands;
 
 use commands::file_commands;
 use commands::task_commands;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static CLOSING: AtomicBool = AtomicBool::new(false);
+
+#[tauri::command]
+fn confirm_close(window: tauri::Window) {
+    CLOSING.store(false, Ordering::SeqCst);
+    window.destroy().ok();
+}
+
+#[tauri::command]
+fn cancel_close() {
+    CLOSING.store(false, Ordering::SeqCst);
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,6 +33,18 @@ pub fn run() {
                 .expect("データベース初期化に失敗");
             app.manage(database);
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // 二重処理を防ぐ
+                if CLOSING.swap(true, Ordering::SeqCst) {
+                    return;
+                }
+                api.prevent_close();
+                // フロントエンドに閉じ要求を通知
+                use tauri::Emitter;
+                window.emit("window-close-requested", ()).ok();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // ファイル操作コマンド (Req 3.1, 3.2, 3.3, 3.4, 3.6)
@@ -37,6 +63,9 @@ pub fn run() {
             task_commands::add_file_link,
             task_commands::remove_file_link,
             task_commands::get_task_file_links,
+            // ウィンドウ閉じ確認
+            confirm_close,
+            cancel_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

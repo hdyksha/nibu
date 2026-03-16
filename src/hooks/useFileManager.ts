@@ -1,8 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MarkdownFile } from "../types";
-
-const AUTO_SAVE_DELAY_MS = 1000;
 
 export interface UseFileManagerReturn {
   currentFile: MarkdownFile | null;
@@ -19,7 +17,8 @@ export interface UseFileManagerReturn {
 
 /**
  * ファイルの保存・読み込み・ダーティフラグ管理を行うカスタムフック。
- * 変更後に自動保存（デバウンス付き）を行う。
+ * 保存は手動（Ctrl+S）で行う。ウィンドウ閉じ・タブ閉じ時のガードは
+ * useWindowCloseGuard / useUnsavedChangesGuard で対応する。
  * Requirements: 3.2, 3.3, 3.6, 3.7
  */
 export function useFileManager(): UseFileManagerReturn {
@@ -30,14 +29,13 @@ export function useFileManager(): UseFileManagerReturn {
   const [isSaving, setIsSaving] = useState(false);
 
   const savedContentRef = useRef("");
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentFileRef = useRef<MarkdownFile | null>(null);
   const contentRef = useRef("");
 
   currentFileRef.current = currentFile;
   contentRef.current = content;
 
-  /** 内部保存処理（自動保存とsaveFileで共用） */
+  /** 内部保存処理 */
   const doSave = useCallback(async (): Promise<boolean> => {
     const file = currentFileRef.current;
     const c = contentRef.current;
@@ -59,14 +57,6 @@ export function useFileManager(): UseFileManagerReturn {
 
   /** ファイルを読み込む (Req 3.3) */
   const loadFile = useCallback(async (fileId: string) => {
-    // 切り替え前に自動保存タイマーをキャンセルし、即座に保存
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = null;
-    }
-    if (currentFileRef.current && contentRef.current !== savedContentRef.current) {
-      await doSave();
-    }
     try {
       const file = await invoke<MarkdownFile>("load_file", { fileId });
       setCurrentFile(file);
@@ -77,52 +67,28 @@ export function useFileManager(): UseFileManagerReturn {
     } catch (e) {
       setError(String(e));
     }
-  }, [doSave]);
+  }, []);
 
   /** 手動保存 (Req 3.2, 3.6) */
   const saveFile = useCallback(async (): Promise<boolean> => {
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = null;
-    }
     return doSave();
   }, [doSave]);
 
-  /** エディタからのコンテンツ変更 + デバウンス自動保存 (Req 3.7) */
+  /** エディタからのコンテンツ変更 (Req 3.7) */
   const updateContent = useCallback((newContent: string) => {
     setContent(newContent);
     const dirty = newContent !== savedContentRef.current;
     setIsDirty(dirty);
-
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-    }
-    if (dirty) {
-      autoSaveTimer.current = setTimeout(() => {
-        doSave();
-      }, AUTO_SAVE_DELAY_MS);
-    }
-  }, [doSave]);
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
   const closeFile = useCallback(() => {
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = null;
-    }
     setCurrentFile(null);
     setContent("");
     savedContentRef.current = "";
     setIsDirty(false);
     setError(null);
-  }, []);
-
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    };
   }, []);
 
   return {
