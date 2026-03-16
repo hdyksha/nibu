@@ -80,7 +80,7 @@
     - `onDirtyChange`, `onTitleChange` コールバックで親にタブ状態を通知
     - 既存の Toolbar, ViewToggle, MarkdownEditor をそのまま使用
     - _Requirements: 3.2, 6.1_
-  - [ ] 7.2 App.tsx を2ペインレイアウトに書き換える
+  - [x] 7.2 App.tsx を2ペインレイアウトに書き換える
     - 3ペイン構成を廃止し、TitleBar + ActivityBar + SidePanel + MainArea の構成に変更
     - `useTabManager` フックを導入
     - ActivityBar の状態管理（activeActivity）を追加
