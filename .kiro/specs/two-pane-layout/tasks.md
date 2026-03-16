@@ -73,7 +73,7 @@
   - すべてのテストが通ることを確認し、不明点があればユーザーに質問する。
 
 - [ ] 7. EditorTabContent コンポーネントと App.tsx の統合
-  - [ ] 7.1 EditorTabContent コンポーネントを作成する
+  - [x] 7.1 EditorTabContent コンポーネントを作成する
     - `src/components/EditorTabContent.tsx` を作成
     - 内部で `useFileManager` を呼び出し、タブごとに独立したファイル管理を実現
     - `isActive` に応じて CSS `display: none` で非表示にし、状態を保持
